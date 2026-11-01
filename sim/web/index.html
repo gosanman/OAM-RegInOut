@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RegInOut-Simulator</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="ets.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <strong>RegInOut-Simulator</strong>
+      <span class="sub" id="device-sub">Binäreingänge und Schaltaktor · echter Firmware-Code</span>
+    </div>
+
+    <div class="group" title="Simulationszeit seit Programmstart / Laufzeit seit dem letzten Neustart">
+      <span class="clock" id="clock">T+00:00:00</span>
+      <span class="uptime" id="uptime">—</span>
+    </div>
+
+    <div class="group" id="speed" aria-label="Geschwindigkeit">
+      <button data-speed="0" title="Anhalten">❚❚</button>
+      <button data-speed="1">1×</button>
+      <button data-speed="10">10×</button>
+      <button data-speed="60">60×</button>
+      <button data-speed="600">600×</button>
+      <span class="sep"></span>
+      <button data-step="100" title="Angehalten: 100 ms weiter">+0,1 s</button>
+      <button data-step="1000">+1 s</button>
+      <button data-step="60000">+1 min</button>
+    </div>
+
+    <div class="group" aria-label="Versorgung">
+      <button class="toggle" id="pwr-bus" title="KNX-Bus: versorgt den Prozessor">KNX-Bus</button>
+      <button class="toggle" id="pwr-supply" title="Versorgung der Relaisspulen">Relais-Versorgung</button>
+      <button id="btn-busdip" title="Kurzer Einbruch der Busspannung (SAVE, nach 1 s Wiederkehr ohne Neustart)">Busdip</button>
+    </div>
+
+    <div class="group" aria-label="ETS">
+      <button class="primary" id="btn-program" title="Parameter wie die ETS herunterladen, mit Neustart">Programmieren</button>
+      <button id="btn-restart" title="Neustart des Geräts">Neustart</button>
+      <button id="btn-unload" title="Applikation entladen: Gerät wie neu">Entladen</button>
+    </div>
+
+    <div class="group" aria-label="Funktionstaste">
+      <button data-btn="short" title="Funktionstaste kurz">Taste kurz</button>
+      <button data-btn="long" title="Funktionstaste lang">lang</button>
+      <button data-btn="double" title="Funktionstaste doppelt">doppelt</button>
+    </div>
+
+    <div class="group" aria-label="Projekt">
+      <select id="project" title="Projekt laden (startet das Gerät neu)"></select>
+      <button id="btn-save" title="Aktuelle Parameter und Hardware als Projekt speichern">Speichern unter …</button>
+    </div>
+
+    <div class="badges" id="badges"></div>
+  </header>
+
+  <main>
+    <section class="left">
+      <nav class="tabs" id="tabs">
+        <button data-tab="inputs" class="active">Bedienung</button>
+        <button data-tab="params">Parameter <span class="count" id="dirty-count"></span></button>
+        <button data-tab="kos">Objekte</button>
+        <button data-tab="bus">Telegramme</button>
+        <button data-tab="console">Konsole</button>
+        <button data-tab="hw">Hardware</button>
+        <button data-tab="checks">Prüfung <span class="count warn" id="warn-count"></span></button>
+      </nav>
+      <div class="tabbody" id="tab-inputs"></div>
+      <div class="tabbody hidden" id="tab-params"></div>
+      <div class="tabbody hidden" id="tab-kos"></div>
+      <div class="tabbody hidden" id="tab-bus">
+        <div class="tools">
+          <input id="bus-filter" placeholder="Filter: Nummer oder Name">
+          <label><input type="checkbox" id="bus-rx" checked> empfangen</label>
+          <label><input type="checkbox" id="bus-tx" checked> gesendet</label>
+          <button id="bus-clear">Leeren</button>
+        </div>
+        <div class="scroll"><table class="grid" id="bus-table"></table></div>
+      </div>
+      <div class="tabbody hidden" id="tab-console">
+        <div class="tools">
+          <input id="cmd" placeholder="Konsolenbefehl, z. B. sa switch a 1" list="cmds">
+          <datalist id="cmds">
+            <option value="help"><option value="sa switch a 1"><option value="sa switch a 0">
+            <option value="sa toggle a"><option value="sa toggle b"><option value="sa test mode">
+          </datalist>
+          <label title="Befehl über das Diagnose-KO 7 schicken; die Antwort kommt in 14-Zeichen-Telegrammen"><input type="checkbox" id="cmd-diag"> über Diagnose-KO</label>
+          <button id="cmd-send" class="primary">Senden</button>
+          <button data-cmd="help">help</button>
+          <button data-cmd="sa toggle a">sa toggle a</button>
+          <button data-cmd="sa toggle b">sa toggle b</button>
+          <button data-cmd="sa test mode">sa test mode</button>
+          <button id="log-clear">Leeren</button>
+        </div>
+        <p class="hint">Die Konsolenbefehle der simulierten Module (Schaltaktor: <span class="mono">sa …</span>); <span class="mono">help</span> zeigt sie.</p>
+        <pre class="log" id="log"></pre>
+      </div>
+      <div class="tabbody hidden" id="tab-hw"></div>
+      <div class="tabbody hidden" id="tab-checks">
+        <p class="hint">Der Wächter prüft nach jedem Durchlauf: Das Statusobjekt eines Relais meldet, was die Spule tut; unparametriert ist kein Relais angezogen; die Firmware blockiert nicht mit <span class="mono">delay()</span>; jeder DPT ist kodierbar. Dazu kommen Neustarts, Downloads, Busdips und Fehler des Kerns.</p>
+        <div class="scroll"><table class="grid" id="checks-table"></table></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="devgrid" id="device"></div>
+      <div class="card chart">
+        <div class="cardhead">
+          <h3>Verlauf der Relais</h3>
+          <div class="seg" id="window">
+            <button data-win="10000">10 s</button>
+            <button data-win="60000" class="active">1 min</button>
+            <button data-win="600000">10 min</button>
+            <button data-win="3600000">1 h</button>
+          </div>
+        </div>
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="card small" id="module"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="ets.js"></script>
+</body>
+</html>

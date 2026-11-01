@@ -1,0 +1,5 @@
+{
+ "name": "Neues Gerät (Vorgaben)",
+ "values": {},
+ "hw": {"supply": true, "contacts": [false, false]}
+}

@@ -1,0 +1,12 @@
+{
+ "name": "Grundaufbau",
+ "values": {
+  "BI_Channel1Active": 1,
+  "BI_Channel2Active": 1,
+  "SWA_Ch1Active": 1,
+  "SWA_Ch1StatusSend": 1,
+  "SWA_Ch2Active": 1,
+  "SWA_Ch2StatusSend": 1
+ },
+ "hw": {"supply": true, "contacts": [false, false]}
+}

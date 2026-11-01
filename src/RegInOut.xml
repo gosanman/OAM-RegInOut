@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/20" xmlns:op="http://github.com/OpenKNX/OpenKNXproducer">
+
+  <op:config href="RegInOut.conf.xml" />
+
+  <!-- ===================================================================================
+       OpenKnxRegInOut / OAM-RegInOut - ETS-Produktdefinition (Entwicklung)
+
+       Gleiche ApplicationNumber und -Version wie RegInOut-Release.xml, nur mit
+       BuildSuffix "-dev" / " (Dev)".
+
+       KO-Belegung:
+         BASE/UCT    0 ..  49
+         BI         50 ..  51   2 Kanaele x 1
+         SWA       100 .. 109   modulweit (KoSingleOffset)
+         SWA       110 .. 127   2 Kanaele x 9
+         LOG       450 .. 746   99 Kanaele x 3
+       =================================================================================== -->
+
+  <op:ETS
+    OpenKnxId="0xAF"
+    ApplicationNumber="0x02"
+    ApplicationVersion="%ReleaseApplicationVersion%"
+    ReplacesVersions="%ReleaseReplacesVersions%"
+    ApplicationRevision="0"
+    FirmwareRevision="0"
+    ProductName="IOModule-Logic"
+    ApplicationName="RegInOut"
+    BusCurrent="20"
+    BuildSuffix="-dev"
+    BuildSuffixText=" (Dev)"
+    OrderNumber="OpenKnxRegInOut"
+    IsRailMounted="true" />
+
+  <op:define prefix="BASE" ModuleType="10"
+    share="../lib/OGM-Common/src/Common.share.xml">
+    <op:verify File="../lib/OGM-Common/library.json" ModuleVersion="%BASE_VerifyVersion%" />
+  </op:define>
+
+  <op:define prefix="UCT" ModuleType="99"
+    share="../lib/OFM-ConfigTransfer/src/ConfigTransfer.share.xml"
+    noConfigTransfer="true">
+    <op:verify File="../lib/OFM-ConfigTransfer/library.json" ModuleVersion="%UCT_VerifyVersion%" />
+  </op:define>
+
+  <op:define prefix="BI" ModuleType="40"
+    share="../lib/OFM-BinaryInput/src/BinaryInputChannel.share.xml"
+    template="../lib/OFM-BinaryInput/src/BinaryInputChannel.templ.xml"
+    NumChannels="2"
+    KoOffset="50">
+    <op:verify File="../lib/OFM-BinaryInput/library.json" ModuleVersion="%BI_VerifyVersion%" />
+  </op:define>
+
+  <op:define prefix="SWA" ModuleType="30"
+    share="../lib/OFM-SwitchActuator/src/SwitchActuatorModule.share.xml"
+    template="../lib/OFM-SwitchActuator/src/SwitchActuatorModule.templ.xml"
+    NumChannels="2"
+    KoSingleOffset="100"
+    KoOffset="110">
+    <op:verify File="../lib/OFM-SwitchActuator/library.json" ModuleVersion="%SWA_VerifyVersion%" />
+  </op:define>
+
+  <op:define prefix="LOG" ModuleType="10"
+    share="../lib/OFM-LogicModule/src/Logikmodul.share.xml"
+    template="../lib/OFM-LogicModule/src/Logikmodul.templ.xml"
+    NumChannels="99"
+    KoOffset="450">
+    <op:verify File="../lib/OFM-LogicModule/library.json" ModuleVersion="%LOG_VerifyVersion%" />
+  </op:define>
+
+  <generate />
+</KNX>

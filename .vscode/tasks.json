@@ -1,0 +1,251 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    //
+    // Die PlatformIO-Umgebung wird bei den Firmware-Tasks ueber eine Auswahlliste
+    // abgefragt (inputs am Ende). Neue Umgebungen aus platformio.custom.ini dort eintragen.
+    //
+    // PowerShell-Skripte laufen ueber pwsh (PowerShell 7) mit -NoProfile und
+    // -ExecutionPolicy Bypass: unabhaengig vom eigenen Profil und von der
+    // Ausfuehrungsrichtlinie. Nicht Windows PowerShell 5.1 ("powershell"): Es schreibt
+    // dependencies.txt mit UTF-8-BOM, das Repo ist danach nach jedem Build veraendert.
+    // Bauvorgaenge mit "$gcc": Compilerfehler und -warnungen landen anklickbar im
+    // Problemfenster.
+    //
+    // Keine Tasks "Hilfetexte erzeugen" und "native Tests": Das Geraet hat keine eigenen
+    // Parameterseiten und keine eigene Logik, beides liegt in den eingebundenen OFM-Repos.
+    "version": "2.0.0",
+    "tasks": [
+        //
+        // --------------------------------------------------------------------------------
+        // ETS-Applikation
+        // --------------------------------------------------------------------------------
+        //
+        // --- OpenKNXproducer: erzeugt src/RegInOut.knxprod und include/knxprod.h ---
+        {
+            "label": "OpenKNXproducer",
+            "type": "shell",
+            "command": "${env:USERPROFILE}/bin/OpenKNXproducer.exe",
+            "args": [
+                "create",
+                "--Debug",
+                "-h",
+                "include/knxprod.h",
+                "src/RegInOut"
+            ],
+            "problemMatcher": [],
+            "group": "test",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Gen. Dependencies.txt"
+            ]
+        },
+        // --- Generate Dependencies.txt ---
+        {
+            "label": "Gen. Dependencies.txt",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "lib/OGM-Common/scripts/setup/reusable/Build-Dependencies.ps1"
+            ],
+            "problemMatcher": [],
+            "group": "test"
+        },
+        //
+        // --------------------------------------------------------------------------------
+        // Development
+        // --------------------------------------------------------------------------------
+        //
+        // --- ausgewaehlte Firmware bauen ---
+        {
+            "label": "Firmware bauen",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "lib/OGM-Common/scripts/build/OpenKNX-Build.ps1",
+                "-env",
+                "${input:developEnv}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Gen. Dependencies.txt"
+            ]
+        },
+        // --- knxprod erzeugen und danach die ausgewaehlte Firmware bauen ---
+        {
+            "label": "knxprod + Firmware",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "lib/OGM-Common/scripts/build/OpenKNX-Build.ps1",
+                "-env",
+                "${input:developEnv}"
+            ],
+            "group": "build",
+            "problemMatcher": "$gcc",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "OpenKNXproducer"
+            ]
+        },
+        // --- ausgewaehlte Firmware bauen und hochladen (USB oder J-Link) ---
+        {
+            "label": "Upload develop",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "lib/OGM-Common/scripts/build/OpenKNX-Build.ps1",
+                "-env",
+                "${input:developEnv}",
+                "-target",
+                "upload"
+            ],
+            "group": "build",
+            "problemMatcher": "$gcc",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Gen. Dependencies.txt"
+            ]
+        },
+        //
+        // --------------------------------------------------------------------------------
+        // Release
+        // --------------------------------------------------------------------------------
+        //
+        // --- knxprod aus src/RegInOut-Release.xml: ohne "-dev" im Namen, sonst gleich (dieselbe ETS-ID).
+        //     Schreibt auch include/knxprod.h - danach traegt die Firmware den Release-Namen,
+        //     bis "OpenKNXproducer" wieder laeuft. ---
+        {
+            "label": "Release-knxprod bauen",
+            "type": "shell",
+            "command": "${env:USERPROFILE}/bin/OpenKNXproducer.exe",
+            "args": [
+                "create",
+                "--Debug",
+                "-h",
+                "include/knxprod.h",
+                "src/RegInOut-Release"
+            ],
+            "problemMatcher": [],
+            "group": "test"
+        },
+        // --- einzelne Release-Firmware bauen ---
+        {
+            "label": "Release-Firmware bauen",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "lib/OGM-Common/scripts/build/OpenKNX-Build.ps1",
+                "-env",
+                "${input:releaseEnv}"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "test"
+        },
+        // --- Release-Paket: knxprod aus src/RegInOut-Release.xml und Firmware (scripts/Build-Release.ps1) ---
+        {
+            "label": "Build-Release",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "scripts/Build-Release.ps1",
+                "Release"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "test"
+        },
+        //
+        // --------------------------------------------------------------------------------
+        // Simulator (sim/README.md)
+        // --------------------------------------------------------------------------------
+        //
+        // --- Kern und meta.json bauen (braucht knxprod.h und RegInOut.debug.xml) ---
+        {
+            "label": "Simulator bauen",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "sim/build.ps1"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "test"
+        },
+        // --- Simulator-App starten, Oberflaeche unter http://127.0.0.1:8767 ---
+        {
+            "label": "Simulator starten",
+            "type": "shell",
+            "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+            "args": [
+                "sim/iosim.py"
+            ],
+            "isBackground": true,
+            "problemMatcher": [],
+            "group": "test"
+        },
+        // --- Selbsttest: typische Ablaeufe gegen die echte Firmware ---
+        {
+            "label": "Simulator-Selbsttest",
+            "type": "shell",
+            "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+            "args": [
+                "sim/selftest.py"
+            ],
+            "problemMatcher": [],
+            "group": "test"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "developEnv",
+            "type": "pickString",
+            "description": "Develop-Umgebung",
+            "options": [
+                "develop_REG1_IO",
+                "upload_JLINK_RP2040"
+            ],
+            "default": "develop_REG1_IO"
+        },
+        {
+            "id": "releaseEnv",
+            "type": "pickString",
+            "description": "Release-Umgebung",
+            "options": [
+                "release_REG1_IO"
+            ],
+            "default": "release_REG1_IO"
+        }
+    ]
+}

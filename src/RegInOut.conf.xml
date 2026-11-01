@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/20" xmlns:op="http://github.com/OpenKNX/OpenKNXproducer">
+
+  <op:config name="%SWA_NumChannelsDefault%" value="2" />
+
+  <!-- Versionsstaende der eingebundenen Module. Der Producer vergleicht sie gegen die
+       library.json des jeweiligen Repos (nur major.minor) und bricht bei Abweichung ab. -->
+  <op:config name="%BASE_VerifyVersion%" value="1.9" />
+  <op:config name="%UCT_VerifyVersion%" value="0.5" />
+  <op:config name="%BI_VerifyVersion%" value="0.4" />
+  <op:config name="%SWA_VerifyVersion%" value="0.4" />
+  <op:config name="%LOG_VerifyVersion%" value="4.4" />
+
+  <!-- Applikationsversion des Geraets.
+       0.5: OGM-Common 1.9, BinaryInput 0.4 und SwitchActuator 0.4 mit geaendertem
+       Parameterspeicher. Ein Geraet mit 0.4 oder aelter wird vollstaendig neu
+       programmiert. -->
+  <op:config name="%ReleaseApplicationVersion%" value="0.5" />
+  <op:config name="%ReleaseReplacesVersions%" value="0.1 0.2 0.3 0.4" />
+
+</KNX>
